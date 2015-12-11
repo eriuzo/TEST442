@@ -11,11 +11,11 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 
 import com.squareup.okhttp.Headers;
 import com.squareup.okhttp.MediaType;
@@ -43,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
 	private ValueCallback<Uri> mUploadMessage;
 	private ValueCallback<Uri[]> mFilePathCallback;
 	private String mCameraPhotoPath;
+	private WebChromeClient webChromeClient;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -50,52 +51,10 @@ public class MainActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_main);
 		webView = (WebView) findViewById(R.id.wv);
 		webView.getSettings().setJavaScriptEnabled(true);
-		webView.addJavascriptInterface(new HoroscopeJavaInterface(this), "Android");
-//		webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+		webView.addJavascriptInterface(new HoroscopeJavaInterface(this), "ngepet");
+		webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 		webView.setBackgroundColor(Color.TRANSPARENT);
-		webView.setWebViewClient(new WebViewClient() {
-			private boolean mbSuccessPage = true;
-
-			@Override
-			public boolean shouldOverrideUrlLoading(WebView view, String url) {
-				view.loadUrl(url);
-				return false;
-			}
-
-			@Override
-			public void onPageFinished(WebView view, String url) {
-				if (mbSuccessPage) {
-				}
-				super.onPageFinished(view, url);
-				view.clearCache(true);
-			}
-
-			//			@Override
-//			public void onPageStarted(WebView view, String url, Bitmap favicon) {
-//				super.onPageStarted(view, url, favicon);
-//				mbSuccessPage = true;
-//			}
-			@Override
-			public void onReceivedError(final WebView view, int errorCode, String description,
-			                            final String failingUrl) {
-				Log.e(String.valueOf(errorCode), description);
-				mbSuccessPage = false;
-				if (!mbSuccessPage) {
-					String customErrorPageHtml = "<html></html>";
-					view.loadData(customErrorPageHtml, "text/html", null);
-					view.clearCache(true);
-				}
-				//control your layout, show something like a retry button, and
-				//call view.loadUrl(failingUrl) to reload.
-				super.onReceivedError(view, errorCode, description, failingUrl);
-			}
-
-			@Override
-			public void onLoadResource(WebView view, String url) {
-				super.onLoadResource(view, url);
-			}
-		});
-		webView.setWebChromeClient(new WebChromeClient() {
+		webChromeClient = new WebChromeClient() {
 			// Android < 3.0
 			public void openFileChooser(ValueCallback<Uri> uploadMsg) {
 				showAttachmentDialog(uploadMsg);
@@ -104,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
 			// For Android >= 5.0
 			@Override
 			public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback,
-			                                 WebChromeClient.FileChooserParams fileChooserParams) {
+			                                 FileChooserParams fileChooserParams) {
 				if (mFilePathCallback != null) {
 					mFilePathCallback.onReceiveValue(null);
 				}
@@ -155,14 +114,21 @@ public class MainActivity extends AppCompatActivity {
 			public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType, String capture) {
 				showAttachmentDialog(uploadMsg);
 			}
-		});
-		String url = "http://ijt.co.id/content/horoscope/index.php";
-		String title = "";
+		};
+		webView.setWebChromeClient(webChromeClient);
+		String url = "https://github.com/";
+		String title = "aaaaa";
 		if (getIntent() != null) {
 			url = getIntent().getStringExtra(WEBVIEW_URL);
 			title = getIntent().getStringExtra(EXTRA_TITLE);
 		}
-		// setTitle(title);
+		setTitle(title);
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+		String url = "http://eriuzo.github.io/TEST442/gege.html";
 		webView.loadUrl(url);
 	}
 
