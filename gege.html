@@ -1,19 +1,28 @@
 <html>
     <head>
-        <title>test</title>
         <script type="text/javascript">
-        if (ngepet!==null) {
-    	    if (ngepet.isKitkat()) {
-    		    ngepet.chooseImage();
-    		}else{
-    		    alert("Not kitkat!");
-    		}
-    	}else{
-    	    alert("Not webview!");
-    	}
+            if (ngepet !== null) {
+                if (ngepet.isKitkat()) {
+                    var wewladbtn = document.getElementById("wewladbtn");
+                    wewladbtn.onclick = function() {
+                        ngepet.chooseImage();
+                    };
+                } else {
+                    alert("Not kitkat!");
+                }
+            } else {
+                alert("Not webview!");
+            }
+            var wewladbtn = document.getElementById("wewladbtn");
+            wewladbtn.onclick = function() {
+                alert("wew lad!")
+            };
         </script>
+        <title>test</title>
     </head>
+
     <body>
-        hello world!
+        <input id="wewladbtn" value="wewlad" type="button">
     </body>
+
 </html>
