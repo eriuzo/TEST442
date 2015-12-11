@@ -1,11 +1,15 @@
 <html>
     <head>
         <title>test</title>
-        <script type="text/javascript">\
+        <script type="text/javascript">
         if (ngepet!==null) {
     	    if (ngepet.isKitkat()) {
     		    ngepet.chooseImage();
+    		}else{
+    		    alert("Not kitkat!");
     		}
+    	}else{
+    	    alert("Not webview!");
     	}
         </script>
     </head>
