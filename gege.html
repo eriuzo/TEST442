@@ -9,6 +9,10 @@
                         wewladbtn.onclick = function() {
                             ngepet.chooseImage();
                         };
+                        var inputfile = document.getElementById("inputfile");
+                        inputfile.onclick = function() {
+                            ngepet.chooseImage();
+                        };
                     } else {
                         alert("Not kitkat!");
                     }
@@ -22,6 +26,7 @@
 
     <body>
         <input id="wewladbtn" value="wewlad" type="button">
+        <input id="inputfile" value="select file broh" type="file">
     </body>
 
 </html>
