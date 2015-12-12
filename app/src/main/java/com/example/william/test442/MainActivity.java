@@ -3,12 +3,16 @@ package com.example.william.test442;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
+import android.support.annotation.CheckResult;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -16,6 +20,7 @@ import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
+import android.widget.ImageView;
 
 import com.squareup.okhttp.Headers;
 import com.squareup.okhttp.MediaType;
@@ -30,6 +35,11 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class MainActivity extends AppCompatActivity {
 	public static final String WEBVIEW_URL = "EA_WEBVIEW_URL";
@@ -38,18 +48,53 @@ public class MainActivity extends AppCompatActivity {
 	private static final int INPUT_FILE_REQUEST_CODE = 9999;
 	private static final String TAG = "HoroscopeActivity";
 	private static final int FILECHOOSER_RESULTCODE_KITKAT = 322;
+	private final MediaType MEDIA_TYPE_JPG = MediaType.parse("image/jpg");
 	private int TTL_INT = 0;
 	private WebView webView;
 	private ValueCallback<Uri> mUploadMessage;
 	private ValueCallback<Uri[]> mFilePathCallback;
 	private String mCameraPhotoPath;
 	private WebChromeClient webChromeClient;
+	private ImageView preview;
+	private String imagePath = null;
+
+	@Nullable
+	@CheckResult
+	public static String getRealPathFromURI_API19(Context context, Uri uri) {
+		String filePath = null;
+		String wholeID = DocumentsContract.getDocumentId(uri);
+
+		// Split at colon, use second item in the array
+		String id = wholeID.split(":")[1];
+
+		String[] column = {MediaStore.Images.Media.DATA};
+
+		// where id is equal to
+		String sel = MediaStore.Images.Media._ID + "=?";
+
+		Cursor cursor = context.getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+				column, sel, new String[]{id}, null);
+
+		int columnIndex = 0;
+		if (cursor != null) {
+			columnIndex = cursor.getColumnIndex(column[0]);
+
+
+			if (cursor.moveToFirst()) {
+				filePath = cursor.getString(columnIndex);
+			}
+			cursor.close();
+		}
+		return filePath;
+	}
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		webView = (WebView) findViewById(R.id.wv);
+		preview = (ImageView) findViewById(R.id.asdf);
+
 		webView.getSettings().setJavaScriptEnabled(true);
 		webView.addJavascriptInterface(new HoroscopeJavaInterface(this), "ngepet");
 		webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
@@ -163,7 +208,13 @@ public class MainActivity extends AppCompatActivity {
 		if (requestCode == FILECHOOSER_RESULTCODE_KITKAT) {
 			if (resultCode == RESULT_OK) {
 				Log.d(TAG, "KITKAT FILE CHOSEN IS " + data.getData());
-				// TODO do something??
+				imagePath = getRealPathFromURI_API19(this, data.getData());
+				if (imagePath != null) {
+					Log.d(TAG, "imagepath=" + imagePath);
+//					uploadPic(imagepath, urltoupload);
+					preview.setVisibility(View.VISIBLE);
+					preview.setImageURI(data.getData());
+				}
 			}
 		}
 	}
@@ -208,9 +259,37 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
-	private class HoroscopeJavaInterface {
-		private final MediaType MEDIA_TYPE_JPG = MediaType.parse("image/jpg");
+	public String uploadPic(String imagePath, String urlToUpload) {
+		final OkHttpClient okHttpClient = new OkHttpClient();
+		RequestBody requestBody = new MultipartBuilder()
+				.type(MultipartBuilder.FORM)
+				.addPart(Headers.of("Content-Disposition", "form-data; name=\"image\""),
+						RequestBody.create(MEDIA_TYPE_JPG, new File(imagePath)))
+				.build();
+		final Request request = new Request.Builder()
+				.url(urlToUpload)
+				.post(requestBody)
+				.build();
+		Callable<String> callable = new Callable<String>() {
+			@Override
+			public String call() throws Exception {
+				Response response = okHttpClient.newCall(request).execute();
+				if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+				return response.body().string();
+			}
+		};
+		String s = "";
+		ExecutorService executorService = Executors.newSingleThreadExecutor();
+		Future<String> submit = executorService.submit(callable);
+		try {
+			s = submit.get();
+		} catch (InterruptedException | ExecutionException e) {
+			e.printStackTrace();
+		}
+		return s;
+	}
 
+	private class HoroscopeJavaInterface {
 		public HoroscopeJavaInterface(Context context) {
 		}
 
@@ -229,31 +308,41 @@ public class MainActivity extends AppCompatActivity {
 
 		/**
 		 * upload jpg file using okhttp multipart post request.
-		 * @param imagePath image path in phone.
-		 * @param urlToUpload where to upload that image.
 		 * @return response string.
 		 */
 		@JavascriptInterface
-		public String uploadPic(String imagePath, String urlToUpload) {
-			String ret = "";
-			OkHttpClient okHttpClient = new OkHttpClient();
+		public String upload() {
+			final OkHttpClient okHttpClient = new OkHttpClient();
+			if (imagePath == null) {
+				return "imgpath is null!!!";
+			}
 			RequestBody requestBody = new MultipartBuilder()
 					.type(MultipartBuilder.FORM)
 					.addPart(Headers.of("Content-Disposition", "form-data; name=\"image\""),
-							RequestBody.create(MEDIA_TYPE_JPG, new File("imagePath")))
+							RequestBody.create(MEDIA_TYPE_JPG, new File(imagePath)))
 					.build();
-			Request request = new Request.Builder()
-					.url(urlToUpload)
+			final Request request = new Request.Builder()
+					.url("http://google.com")
 					.post(requestBody)
 					.build();
+			Callable<String> callable = new Callable<String>() {
+				@Override
+				public String call() throws Exception {
+					Response response = okHttpClient.newCall(request).execute();
+					if (!response.isSuccessful())
+						throw new IOException("Unexpected code " + response);
+					return response.body().string();
+				}
+			};
+			String s = "";
+			ExecutorService executorService = Executors.newSingleThreadExecutor();
+			Future<String> submit = executorService.submit(callable);
 			try {
-				Response response = okHttpClient.newCall(request).execute();
-				if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
-				ret = response.body().string();
-			} catch (IOException e) {
-				ret = e.getMessage();
+				s = submit.get();
+			} catch (InterruptedException | ExecutionException e) {
+				e.printStackTrace();
 			}
-			return ret;
+			return s;
 		}
 	}
 }
